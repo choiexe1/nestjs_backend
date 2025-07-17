@@ -3,18 +3,16 @@ import { User } from "./entities/user.entity";
 import { UserRepository } from "../core/repositories/user.repository.interface";
 
 @Injectable()
-export class InMemoryUserRepository implements UserRepository {
+export class InMemoryUserRepository implements UserRepository<User> {
   private users: User[] = [];
   private nextId = 1;
 
   async findByEmail(email: string): Promise<User | null> {
-    const user = this.users.find((user) => user.email === email);
-    return user || null;
+    return this.users.find((user) => user.email === email) ?? null;
   }
 
   async findById(id: number): Promise<User | null> {
-    const user = this.users.find((user) => user.id === id);
-    return user || null;
+    return this.users.find((user) => user.id === id) ?? null;
   }
 
   async create(

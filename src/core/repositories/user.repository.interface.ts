@@ -1,10 +1,6 @@
-import { User } from "../../users/entities/user.entity";
+import { BaseRepository } from "./base.repository.interface";
 
-export interface UserRepository {
-  findByEmail(email: string): Promise<User | null>;
-  findById(id: number): Promise<User | null>;
-  create(user: Omit<User, "id" | "createdAt" | "updatedAt">): Promise<User>;
-  update(id: number, user: Partial<User>): Promise<User | null>;
-  delete(id: number): Promise<boolean>;
-  findAll(): Promise<User[]>;
+export interface UserRepository<T> extends BaseRepository<T> {
+  findByEmail(email: string): Promise<T | null>;
+  findById(id: number): Promise<T | null>;
 }

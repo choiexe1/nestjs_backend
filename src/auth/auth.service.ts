@@ -7,14 +7,14 @@ import {
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { User } from "../users/entities/user.entity";
-import { UserRepository } from "../core/repositories/user.repository.interface";
 import * as bcrypt from "bcrypt";
+import { UserRepository } from "src/core/repositories/user.repository.interface";
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject("UserRepository")
-    private readonly userRepository: UserRepository,
+    private readonly userRepository: UserRepository<User>,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<Omit<User, "password">> {

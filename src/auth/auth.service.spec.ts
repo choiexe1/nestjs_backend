@@ -11,7 +11,7 @@ jest.mock("bcrypt");
 
 describe("AuthService", () => {
   let service: AuthService;
-  let userRepository: jest.Mocked<UserRepository>;
+  let userRepository: jest.Mocked<UserRepository<User>>;
 
   const mockUser: User = {
     id: 1,
