@@ -1,0 +1,211 @@
+import { Test, TestingModule } from "@nestjs/testing";
+import { ConflictException, UnauthorizedException } from "@nestjs/common";
+import { AuthService } from "./auth.service";
+import { UserRepository } from "../core/repositories/user.repository.interface";
+import { RegisterDto } from "./dto/register.dto";
+import { LoginDto } from "./dto/login.dto";
+import { User } from "../users/entities/user.entity";
+import * as bcrypt from "bcrypt";
+
+jest.mock("bcrypt");
+
+describe("AuthService", () => {
+  let service: AuthService;
+  let userRepository: jest.Mocked<UserRepository>;
+
+  const mockUser: User = {
+    id: 1,
+    name: "홍길동",
+    email: "test@example.com",
+    password: "hashedPassword",
+    age: 25,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  beforeEach(async () => {
+    const mockUserRepository = {
+      findByEmail: jest.fn(),
+      findById: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      findAll: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        {
+          provide: "UserRepository",
+          useValue: mockUserRepository,
+        },
+      ],
+    }).compile();
+
+    service = module.get<AuthService>(AuthService);
+    userRepository = module.get("UserRepository");
+  });
+
+  it("should be defined", () => {
+    expect(service).toBeDefined();
+  });
+
+  describe("register", () => {
+    const registerDto: RegisterDto = {
+      name: "홍길동",
+      email: "test@example.com",
+      password: "password123",
+      age: 25,
+    };
+
+    it("회원가입이 성공해야 한다", async () => {
+      userRepository.findByEmail.mockResolvedValue(null);
+      userRepository.create.mockResolvedValue(mockUser);
+      (bcrypt.hash as jest.Mock).mockResolvedValue("hashedPassword");
+
+      const result = await service.register(registerDto);
+
+      expect(userRepository.findByEmail).toHaveBeenCalledWith(
+        registerDto.email,
+      );
+      expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.password, 10);
+      expect(userRepository.create).toHaveBeenCalledWith({
+        name: registerDto.name,
+        email: registerDto.email,
+        password: "hashedPassword",
+        age: registerDto.age,
+      });
+      expect(result).toEqual({
+        id: mockUser.id,
+        name: mockUser.name,
+        email: mockUser.email,
+        age: mockUser.age,
+        createdAt: mockUser.createdAt,
+        updatedAt: mockUser.updatedAt,
+      });
+      expect(result).not.toHaveProperty("password");
+    });
+
+    it("이미 존재하는 이메일로 회원가입 시 ConflictException이 발생해야 한다", async () => {
+      userRepository.findByEmail.mockResolvedValue(mockUser);
+
+      await expect(service.register(registerDto)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(service.register(registerDto)).rejects.toThrow(
+        "이미 존재하는 이메일입니다.",
+      );
+
+      expect(userRepository.findByEmail).toHaveBeenCalledWith(
+        registerDto.email,
+      );
+      expect(userRepository.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("login", () => {
+    const loginDto: LoginDto = {
+      email: "test@example.com",
+      password: "password123",
+    };
+
+    it("로그인이 성공해야 한다", async () => {
+      userRepository.findByEmail.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const result = await service.login(loginDto);
+
+      expect(userRepository.findByEmail).toHaveBeenCalledWith(loginDto.email);
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        loginDto.password,
+        mockUser.password,
+      );
+      expect(result).toEqual({
+        id: mockUser.id,
+        name: mockUser.name,
+        email: mockUser.email,
+        age: mockUser.age,
+        createdAt: mockUser.createdAt,
+        updatedAt: mockUser.updatedAt,
+      });
+      expect(result).not.toHaveProperty("password");
+    });
+
+    it("존재하지 않는 이메일로 로그인 시 UnauthorizedException이 발생해야 한다", async () => {
+      userRepository.findByEmail.mockResolvedValue(null);
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(service.login(loginDto)).rejects.toThrow(
+        "이메일 또는 비밀번호가 일치하지 않습니다.",
+      );
+
+      expect(userRepository.findByEmail).toHaveBeenCalledWith(loginDto.email);
+    });
+
+    it("잘못된 비밀번호로 로그인 시 UnauthorizedException이 발생해야 한다", async () => {
+      userRepository.findByEmail.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(service.login(loginDto)).rejects.toThrow(
+        "이메일 또는 비밀번호가 일치하지 않습니다.",
+      );
+
+      expect(userRepository.findByEmail).toHaveBeenCalledWith(loginDto.email);
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        loginDto.password,
+        mockUser.password,
+      );
+    });
+  });
+
+  describe("validateUser", () => {
+    it("유효한 사용자 정보로 검증이 성공해야 한다", async () => {
+      userRepository.findByEmail.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const result = await service.validateUser(
+        "test@example.com",
+        "password123",
+      );
+
+      expect(result).toEqual({
+        id: mockUser.id,
+        name: mockUser.name,
+        email: mockUser.email,
+        age: mockUser.age,
+        createdAt: mockUser.createdAt,
+        updatedAt: mockUser.updatedAt,
+      });
+      expect(result).not.toHaveProperty("password");
+    });
+
+    it("존재하지 않는 사용자는 null을 반환해야 한다", async () => {
+      userRepository.findByEmail.mockResolvedValue(null);
+
+      const result = await service.validateUser(
+        "test@example.com",
+        "password123",
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it("잘못된 비밀번호는 null을 반환해야 한다", async () => {
+      userRepository.findByEmail.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      const result = await service.validateUser(
+        "test@example.com",
+        "wrongpassword",
+      );
+
+      expect(result).toBeNull();
+    });
+  });
+});
