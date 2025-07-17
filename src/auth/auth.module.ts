@@ -1,17 +1,34 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
+import { JwtModule } from "@nestjs/jwt";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { PassportModule } from "@nestjs/passport";
 import { AuthService } from "./auth.service";
 import { AuthController } from "./auth.controller";
-import { InMemoryUserRepository } from "../users/in-memory-user.repository";
+import { TokenService } from "./services/token.service";
+import { JwtStrategy } from "./strategies/jwt.strategy";
+import { JwtAuthGuard } from "./guards/jwt-auth.guard";
+import { UsersModule } from "../users/users.module";
 
 @Module({
-  controllers: [AuthController],
-  providers: [
-    AuthService,
-    {
-      provide: "UserRepository",
-      useClass: InMemoryUserRepository,
-    },
+  imports: [
+    forwardRef(() => UsersModule),
+    PassportModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>("JWT_SECRET", "secret-key"),
+        signOptions: {
+          expiresIn: configService.get<string>(
+            "JWT_ACCESS_TOKEN_EXPIRY",
+            "15m",
+          ),
+        },
+      }),
+      inject: [ConfigService],
+    }),
   ],
-  exports: [AuthService],
+  controllers: [AuthController],
+  providers: [AuthService, TokenService, JwtStrategy, JwtAuthGuard],
+  exports: [AuthService, TokenService, JwtAuthGuard],
 })
 export class AuthModule {}

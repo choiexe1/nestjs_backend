@@ -3,6 +3,7 @@ import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { User } from "./entities/user.entity";
 import { UserRepository } from "src/core/repositories/user.repository.interface";
+import { PaginationOptions, PaginatedResult } from "../core/interfaces/pagination.interface";
 
 @Injectable()
 export class UsersService {
@@ -15,8 +16,8 @@ export class UsersService {
     return this.userRepository.create(createUserDto);
   }
 
-  async findAll(): Promise<User[]> {
-    return this.userRepository.findAll();
+  async findAll(options?: PaginationOptions): Promise<PaginatedResult<User>> {
+    return this.userRepository.findAll(options);
   }
 
   async findOne(id: number): Promise<User> {

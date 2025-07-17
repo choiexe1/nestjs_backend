@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { User } from "./entities/user.entity";
 import { UserRepository } from "../core/repositories/user.repository.interface";
+import { EmailAlreadyExistsException } from "../core/exceptions/custom-exception";
+import { PaginationOptions, PaginatedResult } from "../core/interfaces/pagination.interface";
 
 @Injectable()
 export class InMemoryUserRepository implements UserRepository<User> {
@@ -18,6 +20,11 @@ export class InMemoryUserRepository implements UserRepository<User> {
   async create(
     userData: Omit<User, "id" | "createdAt" | "updatedAt">,
   ): Promise<User> {
+    const existingUser = await this.findByEmail(userData.email);
+    if (existingUser) {
+      throw new EmailAlreadyExistsException();
+    }
+
     const user: User = {
       id: this.nextId++,
       ...userData,
@@ -55,7 +62,26 @@ export class InMemoryUserRepository implements UserRepository<User> {
     return true;
   }
 
-  async findAll(): Promise<User[]> {
-    return [...this.users];
+  async findAll(options?: PaginationOptions): Promise<PaginatedResult<User>> {
+    const page = options?.page || 1;
+    const limit = options?.limit || 10;
+    
+    const total = this.users.length;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+    
+    const data = this.users.slice(offset, offset + limit);
+    
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrevious: page > 1,
+      },
+    };
   }
 }

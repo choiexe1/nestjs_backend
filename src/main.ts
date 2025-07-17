@@ -29,7 +29,16 @@ async function bootstrap() {
     .setTitle("백엔드")
     .setDescription("백엔드 API 문서")
     .setVersion("1.0")
-    .addTag("users")
+    .addTag("auth", "인증 관련 API")
+    .addTag("users", "사용자 관리 API")
+    .addBearerAuth({
+      type: "http",
+      scheme: "bearer",
+      bearerFormat: "JWT",
+      name: "JWT",
+      description: "JWT 토큰을 입력하세요",
+      in: "header",
+    })
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

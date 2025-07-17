@@ -1,9 +1,9 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import * as request from "supertest";
-import { AppModule } from "../src/app.module";
-import { ResponseTransformInterceptor } from "../src/core/interceptors/response-transform.interceptor";
-import { GlobalExceptionsFilter } from "../src/core/filters/global.exceptions-filter";
+import { AppModule } from "src/app.module";
+import { ResponseTransformInterceptor } from "src/core/interceptors/response-transform.interceptor";
+import { GlobalExceptionsFilter } from "src/core/filters/global.exceptions-filter";
 
 describe("AuthController (e2e)", () => {
   let app: INestApplication;
@@ -182,7 +182,12 @@ describe("AuthController (e2e)", () => {
           expect(res.body).toHaveProperty("timestamp");
           expect(res.body).toHaveProperty("path", "/auth/login");
 
-          const userData = res.body.data;
+          const tokenData = res.body.data;
+          expect(tokenData).toHaveProperty("accessToken");
+          expect(tokenData).toHaveProperty("refreshToken");
+          expect(tokenData).toHaveProperty("user");
+
+          const userData = tokenData.user;
           expect(userData).toHaveProperty("id");
           expect(userData).toHaveProperty("name", registerDto.name);
           expect(userData).toHaveProperty("email", registerDto.email);

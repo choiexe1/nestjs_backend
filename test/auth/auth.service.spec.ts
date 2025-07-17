@@ -1,17 +1,22 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { AuthService } from "../src/auth/auth.service";
-import { UserRepository } from "../src/core/repositories/user.repository.interface";
-import { RegisterDto } from "../src/auth/dto/register.dto";
-import { LoginDto } from "../src/auth/dto/login.dto";
-import { User } from "../src/users/entities/user.entity";
-import { EmailAlreadyExistsException, InvalidCredentialsException } from "../src/core/exceptions/custom-exception";
 import * as bcrypt from "bcrypt";
+import { AuthService } from "src/auth/auth.service";
+import { LoginDto } from "src/auth/dto/login.dto";
+import { RegisterDto } from "src/auth/dto/register.dto";
+import { TokenService } from "src/auth/services/token.service";
+import {
+  EmailAlreadyExistsException,
+  InvalidCredentialsException,
+} from "src/core/exceptions/custom-exception";
+import { UserRepository } from "src/core/repositories/user.repository.interface";
+import { User } from "src/users/entities/user.entity";
 
 jest.mock("bcrypt");
 
 describe("AuthService", () => {
   let service: AuthService;
   let userRepository: jest.Mocked<UserRepository<User>>;
+  let tokenService: jest.Mocked<TokenService>;
 
   const mockUser: User = {
     id: 1,
@@ -33,6 +38,13 @@ describe("AuthService", () => {
       findAll: jest.fn(),
     };
 
+    const mockTokenService = {
+      generateAccessToken: jest.fn(),
+      generateRefreshToken: jest.fn(),
+      verifyToken: jest.fn(),
+      decodeToken: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -40,11 +52,16 @@ describe("AuthService", () => {
           provide: "UserRepository",
           useValue: mockUserRepository,
         },
+        {
+          provide: TokenService,
+          useValue: mockTokenService,
+        },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
     userRepository = module.get("UserRepository");
+    tokenService = module.get(TokenService);
   });
 
   it("should be defined", () => {
@@ -60,15 +77,11 @@ describe("AuthService", () => {
     };
 
     it("회원가입이 성공해야 한다", async () => {
-      userRepository.findByEmail.mockResolvedValue(null);
       userRepository.create.mockResolvedValue(mockUser);
       (bcrypt.hash as jest.Mock).mockResolvedValue("hashedPassword");
 
       const result = await service.register(registerDto);
 
-      expect(userRepository.findByEmail).toHaveBeenCalledWith(
-        registerDto.email,
-      );
       expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.password, 10);
       expect(userRepository.create).toHaveBeenCalledWith({
         name: registerDto.name,
@@ -88,7 +101,9 @@ describe("AuthService", () => {
     });
 
     it("이미 존재하는 이메일로 회원가입 시 EmailAlreadyExistsException이 발생해야 한다", async () => {
-      userRepository.findByEmail.mockResolvedValue(mockUser);
+      userRepository.create.mockRejectedValue(
+        new EmailAlreadyExistsException(),
+      );
 
       await expect(service.register(registerDto)).rejects.toThrow(
         EmailAlreadyExistsException,
@@ -97,10 +112,12 @@ describe("AuthService", () => {
         "이미 존재하는 이메일입니다.",
       );
 
-      expect(userRepository.findByEmail).toHaveBeenCalledWith(
-        registerDto.email,
-      );
-      expect(userRepository.create).not.toHaveBeenCalled();
+      expect(userRepository.create).toHaveBeenCalledWith({
+        name: registerDto.name,
+        email: registerDto.email,
+        password: expect.any(String),
+        age: registerDto.age,
+      });
     });
   });
 
@@ -113,6 +130,8 @@ describe("AuthService", () => {
     it("로그인이 성공해야 한다", async () => {
       userRepository.findByEmail.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      tokenService.generateAccessToken.mockReturnValue("access-token");
+      tokenService.generateRefreshToken.mockReturnValue("refresh-token");
 
       const result = await service.login(loginDto);
 
@@ -121,15 +140,21 @@ describe("AuthService", () => {
         loginDto.password,
         mockUser.password,
       );
+      expect(tokenService.generateAccessToken).toHaveBeenCalledWith(mockUser);
+      expect(tokenService.generateRefreshToken).toHaveBeenCalledWith(mockUser);
       expect(result).toEqual({
-        id: mockUser.id,
-        name: mockUser.name,
-        email: mockUser.email,
-        age: mockUser.age,
-        createdAt: mockUser.createdAt,
-        updatedAt: mockUser.updatedAt,
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
+        user: {
+          id: mockUser.id,
+          name: mockUser.name,
+          email: mockUser.email,
+          age: mockUser.age,
+          createdAt: mockUser.createdAt,
+          updatedAt: mockUser.updatedAt,
+        },
       });
-      expect(result).not.toHaveProperty("password");
+      expect(result.user).not.toHaveProperty("password");
     });
 
     it("존재하지 않는 이메일로 로그인 시 InvalidCredentialsException이 발생해야 한다", async () => {

@@ -1,9 +1,11 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ConflictException, UnauthorizedException } from "@nestjs/common";
-import { AuthController } from "../src/auth/auth.controller";
-import { AuthService } from "../src/auth/auth.service";
-import { RegisterDto } from "../src/auth/dto/register.dto";
-import { LoginDto } from "../src/auth/dto/login.dto";
+import { User } from "src/users/entities/user.entity";
+import { AuthController } from "src/auth/auth.controller";
+import { AuthService } from "src/auth/auth.service";
+import { TokenResponse } from "src/core/interfaces/token-response.interface";
+import { RegisterDto } from "src/auth/dto/register.dto";
+import { LoginDto } from "src/auth/dto/login.dto";
 
 describe("AuthController", () => {
   let controller: AuthController;
@@ -16,6 +18,12 @@ describe("AuthController", () => {
     age: 25,
     createdAt: new Date(),
     updatedAt: new Date(),
+  };
+
+  const mockTokenResponse: TokenResponse<User> = {
+    accessToken: "access-token",
+    refreshToken: "refresh-token",
+    user: mockUserWithoutPassword,
   };
 
   beforeEach(async () => {
@@ -94,13 +102,15 @@ describe("AuthController", () => {
     };
 
     it("로그인이 성공해야 한다", async () => {
-      authService.login.mockResolvedValue(mockUserWithoutPassword);
+      authService.login.mockResolvedValue(mockTokenResponse);
 
       const result = await controller.login(loginDto);
 
       expect(authService.login).toHaveBeenCalledWith(loginDto);
-      expect(result).toEqual(mockUserWithoutPassword);
-      expect(result).not.toHaveProperty("password");
+      expect(result).toEqual(mockTokenResponse);
+      expect(result).toHaveProperty("accessToken");
+      expect(result).toHaveProperty("refreshToken");
+      expect(result).toHaveProperty("user");
     });
 
     it("존재하지 않는 이메일로 로그인 시 UnauthorizedException이 발생해야 한다", async () => {
