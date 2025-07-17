@@ -1,7 +1,5 @@
 import {
   Injectable,
-  ConflictException,
-  UnauthorizedException,
   Inject,
 } from "@nestjs/common";
 import { RegisterDto } from "./dto/register.dto";
@@ -9,6 +7,7 @@ import { LoginDto } from "./dto/login.dto";
 import { User } from "../users/entities/user.entity";
 import * as bcrypt from "bcrypt";
 import { UserRepository } from "src/core/repositories/user.repository.interface";
+import { EmailAlreadyExistsException, InvalidCredentialsException } from "../core/exceptions/custom-exception";
 
 @Injectable()
 export class AuthService {
@@ -22,7 +21,7 @@ export class AuthService {
 
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser) {
-      throw new ConflictException("이미 존재하는 이메일입니다.");
+      throw new EmailAlreadyExistsException();
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -42,16 +41,12 @@ export class AuthService {
 
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
-      throw new UnauthorizedException(
-        "이메일 또는 비밀번호가 일치하지 않습니다.",
-      );
+      throw new InvalidCredentialsException();
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException(
-        "이메일 또는 비밀번호가 일치하지 않습니다.",
-      );
+      throw new InvalidCredentialsException();
     }
 
     const { password: _, ...userWithoutPassword } = user;

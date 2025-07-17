@@ -1,10 +1,10 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { ConflictException, UnauthorizedException } from "@nestjs/common";
 import { AuthService } from "../src/auth/auth.service";
 import { UserRepository } from "../src/core/repositories/user.repository.interface";
 import { RegisterDto } from "../src/auth/dto/register.dto";
 import { LoginDto } from "../src/auth/dto/login.dto";
 import { User } from "../src/users/entities/user.entity";
+import { EmailAlreadyExistsException, InvalidCredentialsException } from "../src/core/exceptions/custom-exception";
 import * as bcrypt from "bcrypt";
 
 jest.mock("bcrypt");
@@ -87,11 +87,11 @@ describe("AuthService", () => {
       expect(result).not.toHaveProperty("password");
     });
 
-    it("이미 존재하는 이메일로 회원가입 시 ConflictException이 발생해야 한다", async () => {
+    it("이미 존재하는 이메일로 회원가입 시 EmailAlreadyExistsException이 발생해야 한다", async () => {
       userRepository.findByEmail.mockResolvedValue(mockUser);
 
       await expect(service.register(registerDto)).rejects.toThrow(
-        ConflictException,
+        EmailAlreadyExistsException,
       );
       await expect(service.register(registerDto)).rejects.toThrow(
         "이미 존재하는 이메일입니다.",
@@ -132,11 +132,11 @@ describe("AuthService", () => {
       expect(result).not.toHaveProperty("password");
     });
 
-    it("존재하지 않는 이메일로 로그인 시 UnauthorizedException이 발생해야 한다", async () => {
+    it("존재하지 않는 이메일로 로그인 시 InvalidCredentialsException이 발생해야 한다", async () => {
       userRepository.findByEmail.mockResolvedValue(null);
 
       await expect(service.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
+        InvalidCredentialsException,
       );
       await expect(service.login(loginDto)).rejects.toThrow(
         "이메일 또는 비밀번호가 일치하지 않습니다.",
@@ -145,12 +145,12 @@ describe("AuthService", () => {
       expect(userRepository.findByEmail).toHaveBeenCalledWith(loginDto.email);
     });
 
-    it("잘못된 비밀번호로 로그인 시 UnauthorizedException이 발생해야 한다", async () => {
+    it("잘못된 비밀번호로 로그인 시 InvalidCredentialsException이 발생해야 한다", async () => {
       userRepository.findByEmail.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(service.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
+        InvalidCredentialsException,
       );
       await expect(service.login(loginDto)).rejects.toThrow(
         "이메일 또는 비밀번호가 일치하지 않습니다.",
