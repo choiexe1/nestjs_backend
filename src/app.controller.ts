@@ -22,7 +22,7 @@ export class AppController {
       },
     },
   })
-  getHello(): { status: string } {
+  getStatus(): { status: string } {
     return this.appService.status();
   }
 }

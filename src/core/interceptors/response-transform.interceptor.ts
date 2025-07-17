@@ -19,6 +19,12 @@ export class ResponseTransformInterceptor<T>
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
 
+    // 특정 라우트는 인터셉터를 적용하지 않음
+    const skipPaths = ['/'];
+    if (skipPaths.includes(request.url)) {
+      return next.handle();
+    }
+
     return next.handle().pipe(
       map((data) => {
         const apiResponse: ApiResponse<T> = {
