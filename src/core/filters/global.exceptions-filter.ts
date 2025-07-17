@@ -39,10 +39,7 @@ export class GlobalExceptionsFilter implements ExceptionFilter {
     };
 
     // 에러 로깅
-    this.logger.error(
-      `HTTP ${status} Error: ${errorMessage}`,
-      exception instanceof Error ? exception.stack : "No stack",
-    );
+    this.logger.error(`HTTP ${status} Error: ${errorMessage}`);
 
     response.status(status).json(apiResponse);
   }

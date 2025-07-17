@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of } from 'rxjs';
-import { ResponseTransformInterceptor } from './response-transform.interceptor';
+import { ResponseTransformInterceptor } from '../src/core/interceptors/response-transform.interceptor';
 
 describe('ResponseTransformInterceptor', () => {
   let interceptor: ResponseTransformInterceptor<any>;

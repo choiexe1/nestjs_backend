@@ -2,8 +2,8 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import * as request from "supertest";
 import { AppModule } from "../src/app.module";
-import { ResponseTransformInterceptor } from "../src/common/interceptors/response-transform.interceptor";
-import { AllExceptionsFilter } from "../src/common/filters/all-exceptions.filter";
+import { ResponseTransformInterceptor } from "../src/core/interceptors/response-transform.interceptor";
+import { GlobalExceptionsFilter } from "../src/core/filters/global.exceptions-filter";
 
 describe("AuthController (e2e)", () => {
   let app: INestApplication;
@@ -22,7 +22,7 @@ describe("AuthController (e2e)", () => {
       }),
     );
     app.useGlobalInterceptors(new ResponseTransformInterceptor());
-    app.useGlobalFilters(new AllExceptionsFilter());
+    app.useGlobalFilters(new GlobalExceptionsFilter());
     await app.init();
   });
 

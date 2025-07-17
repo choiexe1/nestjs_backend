@@ -1,9 +1,9 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ConflictException, UnauthorizedException } from "@nestjs/common";
-import { AuthController } from "./auth.controller";
-import { AuthService } from "./auth.service";
-import { RegisterDto } from "./dto/register.dto";
-import { LoginDto } from "./dto/login.dto";
+import { AuthController } from "../src/auth/auth.controller";
+import { AuthService } from "../src/auth/auth.service";
+import { RegisterDto } from "../src/auth/dto/register.dto";
+import { LoginDto } from "../src/auth/dto/login.dto";
 
 describe("AuthController", () => {
   let controller: AuthController;

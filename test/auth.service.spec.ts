@@ -1,10 +1,10 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ConflictException, UnauthorizedException } from "@nestjs/common";
-import { AuthService } from "./auth.service";
-import { UserRepository } from "../core/repositories/user.repository.interface";
-import { RegisterDto } from "./dto/register.dto";
-import { LoginDto } from "./dto/login.dto";
-import { User } from "../users/entities/user.entity";
+import { AuthService } from "../src/auth/auth.service";
+import { UserRepository } from "../src/core/repositories/user.repository.interface";
+import { RegisterDto } from "../src/auth/dto/register.dto";
+import { LoginDto } from "../src/auth/dto/login.dto";
+import { User } from "../src/users/entities/user.entity";
 import * as bcrypt from "bcrypt";
 
 jest.mock("bcrypt");
