@@ -1,4 +1,7 @@
-import { PaginationOptions, PaginatedResult } from "../interfaces/pagination.interface";
+import {
+  PaginationOptions,
+  PaginatedResult,
+} from "../interfaces/pagination.interface";
 
 export interface BaseRepository<T> {
   create(entity: Omit<T, "id" | "createdAt" | "updatedAt">): Promise<T>;

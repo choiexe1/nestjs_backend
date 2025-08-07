@@ -16,11 +16,12 @@ export class TokenService {
       sub: user.id,
       email: user.email,
       name: user.name,
+      role: user.role,
     };
 
     const accessTokenExpiry = this.configService.get<string>(
       "JWT_ACCESS_TOKEN_EXPIRY",
-      "15m",
+      "5m",
     );
 
     return this.jwtService.sign(payload, {
@@ -33,11 +34,13 @@ export class TokenService {
       sub: user.id,
       email: user.email,
       name: user.name,
+      role: user.role,
     };
 
+    // 🔒 보안 강화: Refresh Token 만료시간 단축 (7일 → 1일)
     const refreshTokenExpiry = this.configService.get<string>(
       "JWT_REFRESH_TOKEN_EXPIRY",
-      "7d",
+      "1d",
     );
 
     return this.jwtService.sign(payload, {

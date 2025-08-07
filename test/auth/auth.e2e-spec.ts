@@ -1,9 +1,9 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import * as request from "supertest";
-import { AppModule } from "src/app.module";
-import { ResponseTransformInterceptor } from "src/core/interceptors/response-transform.interceptor";
-import { GlobalExceptionsFilter } from "src/core/filters/global.exceptions-filter";
+import { AppModule } from "../../src/app.module";
+import { ResponseTransformInterceptor } from "../../src/core/interceptors/response-transform.interceptor";
+import { GlobalExceptionsFilter } from "../../src/core/filters/global.exceptions-filter";
 
 describe("AuthController (e2e)", () => {
   let app: INestApplication;
@@ -182,12 +182,24 @@ describe("AuthController (e2e)", () => {
           expect(res.body).toHaveProperty("timestamp");
           expect(res.body).toHaveProperty("path", "/auth/login");
 
-          const tokenData = res.body.data;
-          expect(tokenData).toHaveProperty("accessToken");
-          expect(tokenData).toHaveProperty("refreshToken");
-          expect(tokenData).toHaveProperty("user");
+          const loginData = res.body.data;
+          expect(loginData).toHaveProperty("user");
 
-          const userData = tokenData.user;
+          // 토큰은 HttpOnly Cookie로 설정되어 응답 본문에는 포함되지 않음
+          expect(res.headers['set-cookie']).toBeDefined();
+          
+          // 쿠키에 accessToken과 refreshToken이 설정되었는지 확인
+          const cookies = res.headers['set-cookie'] || [];
+          const hasAccessToken = Array.isArray(cookies) ? 
+            cookies.some((cookie: string) => cookie.includes('accessToken')) :
+            cookies.includes('accessToken');
+          const hasRefreshToken = Array.isArray(cookies) ?
+            cookies.some((cookie: string) => cookie.includes('refreshToken')) :
+            cookies.includes('refreshToken');
+          expect(hasAccessToken).toBe(true);
+          expect(hasRefreshToken).toBe(true);
+
+          const userData = loginData.user;
           expect(userData).toHaveProperty("id");
           expect(userData).toHaveProperty("name", registerDto.name);
           expect(userData).toHaveProperty("email", registerDto.email);

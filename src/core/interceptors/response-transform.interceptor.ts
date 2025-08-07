@@ -3,10 +3,10 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
-} from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { ApiResponse } from '../interfaces/api-response.interface';
+} from "@nestjs/common";
+import { Observable } from "rxjs";
+import { map } from "rxjs/operators";
+import { ApiResponse } from "../interfaces/api-response.interface";
 
 @Injectable()
 export class ResponseTransformInterceptor<T>
@@ -20,7 +20,7 @@ export class ResponseTransformInterceptor<T>
     const response = context.switchToHttp().getResponse();
 
     // 특정 라우트는 인터셉터를 적용하지 않음
-    const skipPaths = ['/'];
+    const skipPaths = ["/"];
     if (skipPaths.includes(request.url)) {
       return next.handle();
     }
@@ -42,16 +42,16 @@ export class ResponseTransformInterceptor<T>
 
   private getSuccessMessage(method: string, statusCode: number): string {
     switch (method) {
-      case 'POST':
-        return statusCode === 201 ? '생성되었습니다.' : '처리되었습니다.';
-      case 'PUT':
-      case 'PATCH':
-        return '수정되었습니다.';
-      case 'DELETE':
-        return '삭제되었습니다.';
-      case 'GET':
+      case "POST":
+        return statusCode === 201 ? "생성되었습니다." : "처리되었습니다.";
+      case "PUT":
+      case "PATCH":
+        return "수정되었습니다.";
+      case "DELETE":
+        return "삭제되었습니다.";
+      case "GET":
       default:
-        return '조회되었습니다.';
+        return "조회되었습니다.";
     }
   }
 }

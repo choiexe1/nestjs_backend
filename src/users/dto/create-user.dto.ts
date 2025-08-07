@@ -4,8 +4,11 @@ import {
   IsOptional,
   Length,
   MinLength,
+  IsEnum,
+  IsBoolean,
 } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
+import { Role } from "../../core/enums/role.enum";
 
 export class CreateUserDto {
   @ApiProperty({
@@ -41,4 +44,25 @@ export class CreateUserDto {
   })
   @IsOptional()
   age?: number;
+
+  @ApiProperty({
+    description: "사용자 역할",
+    example: "user",
+    enum: Role,
+    default: Role.USER,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(Role)
+  role?: Role;
+
+  @ApiProperty({
+    description: "사용자 활성 상태",
+    example: true,
+    default: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

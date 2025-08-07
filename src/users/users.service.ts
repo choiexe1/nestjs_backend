@@ -3,7 +3,11 @@ import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { User } from "./entities/user.entity";
 import { UserRepository } from "src/core/repositories/user.repository.interface";
-import { PaginationOptions, PaginatedResult } from "../core/interfaces/pagination.interface";
+import {
+  PaginationOptions,
+  PaginatedResult,
+} from "../core/interfaces/pagination.interface";
+import { Role } from "../core/enums/role.enum";
 
 @Injectable()
 export class UsersService {
@@ -13,7 +17,17 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    return this.userRepository.create(createUserDto);
+    const hashedPassword = await User.hashPassword(createUserDto.password);
+
+    const userData = {
+      ...createUserDto,
+      password: hashedPassword,
+      role: createUserDto.role || Role.USER,
+      isActive:
+        createUserDto.isActive !== undefined ? createUserDto.isActive : true,
+    } as Omit<User, "id" | "createdAt" | "updatedAt">;
+
+    return this.userRepository.create(userData);
   }
 
   async findAll(options?: PaginationOptions): Promise<PaginatedResult<User>> {
@@ -28,8 +42,25 @@ export class UsersService {
     return user;
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userRepository.findByEmail(email);
+  }
+
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
-    const updatedUser = await this.userRepository.update(id, updateUserDto);
+    let processedUpdateDto = { ...updateUserDto };
+
+    if (updateUserDto.password) {
+      const hashedPassword = await User.hashPassword(updateUserDto.password);
+      processedUpdateDto = {
+        ...updateUserDto,
+        password: hashedPassword,
+      };
+    }
+
+    const updatedUser = await this.userRepository.update(
+      id,
+      processedUpdateDto,
+    );
     if (!updatedUser) {
       throw new NotFoundException(`ID가 ${id}인 사용자를 찾을 수 없습니다.`);
     }

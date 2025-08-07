@@ -12,7 +12,14 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth } from "@nestjs/swagger";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
+} from "@nestjs/swagger";
 import { UsersService } from "./users.service";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
@@ -20,18 +27,21 @@ import { PaginationQueryDto } from "./dto/pagination-query.dto";
 import { User } from "./entities/user.entity";
 import { PaginatedResult } from "../core/interfaces/pagination.interface";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RoleGuard } from "../auth/guards/role.guard";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { AdminOnly, AllRoles } from "../auth/decorators/roles.decorator";
 import { TokenPayload } from "../core/interfaces/token-response.interface";
 
 @ApiTags("users")
 @Controller("users")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RoleGuard)
 @ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @ApiOperation({ summary: "사용자 생성" })
+  @AdminOnly()
+  @ApiOperation({ summary: "사용자 생성 (관리자 전용)" })
   @ApiResponse({
     status: 201,
     description: "사용자가 성공적으로 생성되었습니다.",
@@ -39,41 +49,59 @@ export class UsersController {
   })
   @ApiResponse({ status: 400, description: "잘못된 요청" })
   @ApiResponse({ status: 401, description: "인증되지 않은 사용자" })
+  @ApiResponse({ status: 403, description: "관리자 권한이 필요합니다" })
   async create(@Body() createUserDto: CreateUserDto): Promise<User> {
     return await this.usersService.create(createUserDto);
   }
 
   @Get()
-  @ApiOperation({ summary: "모든 사용자 조회 (페이지네이션 지원)" })
-  @ApiQuery({ name: 'page', required: false, description: '페이지 번호 (1부터 시작)', example: 1 })
-  @ApiQuery({ name: 'limit', required: false, description: '페이지당 항목 수', example: 10 })
+  @AdminOnly()
+  @ApiOperation({
+    summary: "모든 사용자 조회 (관리자 전용, 페이지네이션 지원)",
+  })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    description: "페이지 번호 (1부터 시작)",
+    example: 1,
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    description: "페이지당 항목 수",
+    example: 10,
+  })
   @ApiResponse({
     status: 200,
     description: "사용자 목록을 성공적으로 조회했습니다.",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        data: { type: 'array', items: { $ref: '#/components/schemas/User' } },
+        data: { type: "array", items: { $ref: "#/components/schemas/User" } },
         pagination: {
-          type: 'object',
+          type: "object",
           properties: {
-            page: { type: 'number' },
-            limit: { type: 'number' },
-            total: { type: 'number' },
-            totalPages: { type: 'number' },
-            hasNext: { type: 'boolean' },
-            hasPrevious: { type: 'boolean' },
+            page: { type: "number" },
+            limit: { type: "number" },
+            total: { type: "number" },
+            totalPages: { type: "number" },
+            hasNext: { type: "boolean" },
+            hasPrevious: { type: "boolean" },
           },
         },
       },
     },
   })
   @ApiResponse({ status: 401, description: "인증되지 않은 사용자" })
-  async findAll(@Query() query: PaginationQueryDto): Promise<PaginatedResult<User>> {
+  @ApiResponse({ status: 403, description: "관리자 권한이 필요합니다" })
+  async findAll(
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResult<User>> {
     return await this.usersService.findAll(query);
   }
 
   @Get("profile")
+  @AllRoles()
   @ApiOperation({ summary: "현재 사용자 프로필 조회" })
   @ApiResponse({
     status: 200,
@@ -86,7 +114,8 @@ export class UsersController {
   }
 
   @Get(":id")
-  @ApiOperation({ summary: "특정 사용자 조회" })
+  @AdminOnly()
+  @ApiOperation({ summary: "특정 사용자 조회 (관리자 전용)" })
   @ApiParam({ name: "id", description: "사용자 ID" })
   @ApiResponse({
     status: 200,
@@ -95,12 +124,14 @@ export class UsersController {
   })
   @ApiResponse({ status: 404, description: "사용자를 찾을 수 없습니다." })
   @ApiResponse({ status: 401, description: "인증되지 않은 사용자" })
+  @ApiResponse({ status: 403, description: "관리자 권한이 필요합니다" })
   async findOne(@Param("id", ParseIntPipe) id: number): Promise<User> {
     return await this.usersService.findOne(id);
   }
 
   @Patch(":id")
-  @ApiOperation({ summary: "사용자 정보 수정" })
+  @AdminOnly()
+  @ApiOperation({ summary: "사용자 정보 수정 (관리자 전용)" })
   @ApiParam({ name: "id", description: "사용자 ID" })
   @ApiResponse({
     status: 200,
@@ -109,6 +140,7 @@ export class UsersController {
   })
   @ApiResponse({ status: 404, description: "사용자를 찾을 수 없습니다." })
   @ApiResponse({ status: 401, description: "인증되지 않은 사용자" })
+  @ApiResponse({ status: 403, description: "관리자 권한이 필요합니다" })
   async update(
     @Param("id", ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
@@ -117,8 +149,9 @@ export class UsersController {
   }
 
   @Delete(":id")
+  @AdminOnly()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: "사용자 삭제" })
+  @ApiOperation({ summary: "사용자 삭제 (관리자 전용)" })
   @ApiParam({ name: "id", description: "사용자 ID" })
   @ApiResponse({
     status: 204,
@@ -126,6 +159,7 @@ export class UsersController {
   })
   @ApiResponse({ status: 404, description: "사용자를 찾을 수 없습니다." })
   @ApiResponse({ status: 401, description: "인증되지 않은 사용자" })
+  @ApiResponse({ status: 403, description: "관리자 권한이 필요합니다" })
   async remove(@Param("id", ParseIntPipe) id: number): Promise<void> {
     return await this.usersService.remove(id);
   }

@@ -4,11 +4,11 @@ import { Logger, ValidationPipe } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { ResponseTransformInterceptor } from "./core/interceptors/response-transform.interceptor";
 import { GlobalExceptionsFilter } from "./core/filters/global.exceptions-filter";
+import * as cookieParser from "cookie-parser";
 
 async function bootstrap() {
   const logger = new Logger("Application");
 
-  // 처리되지 않은 예외 처리
   process.on("uncaughtException", (error) => {
     logger.error("Uncaught Exception:", error);
     process.exit(1);
@@ -21,6 +21,8 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
+  app.use(cookieParser());
+
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
@@ -32,9 +34,14 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResponseTransformInterceptor());
   app.useGlobalFilters(new GlobalExceptionsFilter());
 
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const adminUrl = process.env.ADMIN_URL || "http://localhost:3000";
+
   app.enableCors({
-    origin: true,
-    credentials: true,
+    origin: [frontendUrl, adminUrl], // 환경변수로 관리되는 프론트엔드 도메인만 허용
+    credentials: true, // HttpOnly Cookie 전송 허용
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   });
 
   const config = new DocumentBuilder()
