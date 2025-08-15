@@ -3,23 +3,23 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
-  Inject,
 } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 import { TokenService } from "../services/token.service";
 import {
   InvalidTokenException,
   ExpiredTokenException,
   UserInactiveException,
 } from "../../core/exceptions/custom-exception";
-import { UserRepository } from "../../core/repositories/user.repository.interface";
 import { User } from "../../users/entities/user.entity";
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly tokenService: TokenService,
-    @Inject("UserRepository")
-    private readonly userRepository: UserRepository<User>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -34,7 +34,7 @@ export class JwtAuthGuard implements CanActivate {
       const payload = this.tokenService.verifyToken(token);
 
       // 토큰에서 사용자 ID 추출하여 실제 사용자 정보 조회
-      const user = await this.userRepository.findById(payload.sub);
+      const user = await this.userRepository.findOne({ where: { id: payload.sub } });
 
       if (!user) {
         throw new InvalidTokenException();

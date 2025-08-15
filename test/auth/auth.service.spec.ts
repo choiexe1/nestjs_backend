@@ -1,5 +1,5 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import * as bcrypt from "bcrypt";
+import * as _bcrypt from "bcrypt";
 import { AuthService } from "../../src/auth/auth.service";
 import { LoginDto } from "../../src/auth/dto/login.dto";
 import { RegisterDto } from "../../src/auth/dto/register.dto";
@@ -17,7 +17,7 @@ jest.mock("bcrypt");
 
 describe("AuthService", () => {
   let service: AuthService;
-  let userRepository: jest.Mocked<UserRepository<User>>;
+  let _userRepository: jest.Mocked<UserRepository<User>>;
   let tokenService: jest.Mocked<TokenService>;
   let usersService: jest.Mocked<UsersService>;
 
@@ -78,7 +78,7 @@ describe("AuthService", () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    userRepository = module.get("UserRepository");
+    _userRepository = module.get("UserRepository");
     tokenService = module.get(TokenService);
     usersService = module.get(UsersService);
   });

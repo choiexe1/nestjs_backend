@@ -1,68 +1,85 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { Role, ROLE_PERMISSIONS } from "../../core/enums/role.enum";
-import * as bcrypt from "bcrypt";
+import { ApiProperty } from '@nestjs/swagger';
+import { Role, ROLE_PERMISSIONS } from '../../core/enums/role.enum';
+import * as bcrypt from 'bcrypt';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
-/**
- * 사용자 도메인 엔티티
- * Rich Domain Model 패턴을 적용하여 비즈니스 로직을 캡슐화
- */
+@Entity('users')
 export class User {
   @ApiProperty({
-    description: "사용자 ID",
+    description: '사용자 ID',
     example: 1,
   })
+  @PrimaryGeneratedColumn()
   id: number;
 
   @ApiProperty({
-    description: "사용자 이름",
-    example: "홍길동",
+    description: '사용자 이름',
+    example: '홍길동',
   })
+  @Column({ length: 100 })
   name: string;
 
   @ApiProperty({
-    description: "이메일 주소",
-    example: "user@example.com",
+    description: '이메일 주소',
+    example: 'user@example.com',
   })
+  @Column({ unique: true, length: 255 })
   email: string;
 
   @ApiProperty({
-    description: "비밀번호",
-    example: "password123",
+    description: '비밀번호',
+    example: 'password123',
   })
+  @Column()
   password: string;
 
   @ApiProperty({
-    description: "나이",
+    description: '나이',
     example: 25,
     required: false,
   })
+  @Column({ nullable: true })
   age?: number;
 
   @ApiProperty({
-    description: "사용자 역할",
-    example: "user",
+    description: '사용자 역할',
+    example: 'user',
     enum: Role,
+    default: Role.USER,
+  })
+  @Column({
+    type: 'varchar',
+    length: 20,
     default: Role.USER,
   })
   role: Role;
 
   @ApiProperty({
-    description: "사용자 활성 상태",
+    description: '사용자 활성 상태',
     example: true,
     default: true,
   })
+  @Column({ default: true })
   isActive: boolean;
 
   @ApiProperty({
-    description: "생성일",
-    example: "2024-01-01T00:00:00.000Z",
+    description: '생성일',
+    example: '2024-01-01T00:00:00.000Z',
   })
+  @CreateDateColumn()
   createdAt: Date;
 
   @ApiProperty({
-    description: "수정일",
-    example: "2024-01-01T00:00:00.000Z",
+    description: '수정일',
+    example: '2024-01-01T00:00:00.000Z',
   })
+  @UpdateDateColumn()
   updatedAt: Date;
 
   /**
@@ -161,9 +178,9 @@ export class User {
    * 보안상 비밀번호를 제외한 정보만 반환
    * @returns 비밀번호가 제거된 사용자 정보
    */
-  toSafeUser(): Omit<User, "password"> {
-    const { password, ...safeUser } = this;
-    return safeUser as Omit<User, "password">;
+  toSafeUser(): Omit<User, 'password'> {
+    const { password: _password, ...safeUser } = this;
+    return safeUser as Omit<User, 'password'>;
   }
 
   /**

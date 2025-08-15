@@ -1,18 +1,19 @@
-import { Injectable, Inject } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { ConfigService } from "@nestjs/config";
 import { Request } from "express";
 import { TokenPayload } from "../../core/interfaces/token-response.interface";
-import { UserRepository } from "../../core/repositories/user.repository.interface";
 import { User } from "../../users/entities/user.entity";
 import { InvalidTokenException } from "../../core/exceptions/custom-exception";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    @Inject("UserRepository")
-    private readonly userRepository: UserRepository<User>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly configService: ConfigService,
   ) {
     super({
@@ -40,7 +41,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: TokenPayload): Promise<Omit<User, "password">> {
-    const user = await this.userRepository.findById(payload.sub);
+    const user = await this.userRepository.findOne({ where: { id: payload.sub } });
 
     if (!user) {
       throw new InvalidTokenException();

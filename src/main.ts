@@ -22,7 +22,23 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", "data:", "https:"],
+        },
+      },
+      // hsts: {
+      //   maxAge: 31536000,
+      //   includeSubDomains: true,
+      //   preload: true,
+      // },
+    }),
+  );
   app.use(cookieParser());
 
   app.useGlobalPipes(
@@ -40,8 +56,8 @@ async function bootstrap() {
   const adminUrl = process.env.ADMIN_URL || "http://localhost:3000";
 
   app.enableCors({
-    origin: [frontendUrl, adminUrl], // 환경변수로 관리되는 프론트엔드 도메인만 허용
-    credentials: true, // HttpOnly Cookie 전송 허용
+    origin: [frontendUrl, adminUrl], // 환경변수로 관리되는 프론트엔드 도메인만
+    credentials: true, // HttpOnly Cookie 전송
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   });
