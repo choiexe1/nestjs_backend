@@ -261,3 +261,5 @@ All API responses follow this consistent structure:
 
 - NestJS Docs(https://docs.nestjs.com/)
 - TypeORM Docs(https://typeorm.io/docs/)
+
+- 시킨 일만 수행하고, 추가적으로 작업하려면 항상 허락맡아야한다.

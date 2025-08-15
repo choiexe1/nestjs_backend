@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
+import { AddWalletDto } from "./dto/add-wallet.dto";
+import { UpdateWalletDto } from "./dto/update-wallet.dto";
 import { User } from "./entities/user.entity";
 import {
   PaginationOptions,
@@ -94,5 +96,70 @@ export class UsersService {
     if (result.affected === 0) {
       throw new NotFoundException(`ID가 ${id}인 사용자를 찾을 수 없습니다.`);
     }
+  }
+
+  // 지갑 관리 기능들
+  async addWallet(userId: number, addWalletDto: AddWalletDto): Promise<User> {
+    const user = await this.findOne(userId);
+
+    try {
+      user.addWalletAddress(addWalletDto.address, addWalletDto.network);
+      return await this.userRepository.save(user);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async updateWallet(userId: number, network: string, updateWalletDto: UpdateWalletDto): Promise<User> {
+    const user = await this.findOne(userId);
+
+    try {
+      user.updateWalletAddress(network, updateWalletDto.address);
+      return await this.userRepository.save(user);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async removeWallet(userId: number, network: string): Promise<User> {
+    const user = await this.findOne(userId);
+
+    const removed = user.removeWalletAddress(network);
+    if (!removed) {
+      throw new NotFoundException(`${network} 네트워크의 지갑을 찾을 수 없습니다.`);
+    }
+
+    return await this.userRepository.save(user);
+  }
+
+  async getWalletByNetwork(userId: number, network: string) {
+    const user = await this.findOne(userId);
+    const wallet = user.getWalletByNetwork(network);
+    
+    if (!wallet) {
+      throw new NotFoundException(`${network} 네트워크의 지갑을 찾을 수 없습니다.`);
+    }
+
+    return {
+      network: wallet.network,
+      address: wallet.address,
+      shortAddress: wallet.toShortString(),
+      explorerUrl: wallet.getExplorerUrl(),
+    };
+  }
+
+  async getAllWallets(userId: number) {
+    const user = await this.findOne(userId);
+    
+    return {
+      walletCount: user.getWalletAddressCount(),
+      networks: user.getRegisteredNetworks(),
+      wallets: user.wallets ? user.wallets.map(wallet => ({
+        network: wallet.network,
+        address: wallet.address,
+        shortAddress: wallet.toShortString(),
+        explorerUrl: wallet.getExplorerUrl(),
+      })) : [],
+    };
   }
 }

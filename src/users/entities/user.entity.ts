@@ -8,6 +8,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { WalletAddress } from '../vo';
 
 @Entity('users')
 export class User {
@@ -40,14 +41,6 @@ export class User {
   password: string;
 
   @ApiProperty({
-    description: '나이',
-    example: 25,
-    required: false,
-  })
-  @Column({ nullable: true })
-  age?: number;
-
-  @ApiProperty({
     description: '사용자 역할',
     example: 'user',
     enum: Role,
@@ -59,6 +52,38 @@ export class User {
     default: Role.USER,
   })
   role: Role;
+
+  @ApiProperty({
+    description: '지갑 주소 목록',
+    example: [
+      {
+        address: '0x742d35Cc6672d3C7b67a6b7F4c4a0b8F3D4e5f6a',
+        network: 'ethereum',
+      },
+    ],
+    type: 'array',
+    required: false,
+  })
+  @Column({
+    type: 'json',
+    nullable: true,
+    transformer: {
+      to: (wallets: WalletAddress[]) => {
+        if (!wallets || !Array.isArray(wallets)) return null;
+        return wallets.map((wallet) => ({
+          address: wallet.address,
+          network: wallet.network,
+        }));
+      },
+      from: (data: any[]) => {
+        if (!data || !Array.isArray(data)) return [];
+        return data.map(
+          (item) => new WalletAddress(item.address, item.network),
+        );
+      },
+    },
+  })
+  wallets: WalletAddress[];
 
   @ApiProperty({
     description: '사용자 활성 상태',
@@ -109,7 +134,7 @@ export class User {
    * 활성 상태인 사용자만 로그인 허용
    * @returns 로그인 가능 여부
    */
-  isEligibleForLogin(): boolean {
+  isActivated(): boolean {
     return this.isActive;
   }
 
@@ -136,7 +161,7 @@ export class User {
    * @returns 관리자 액션 수행 가능 여부
    */
   canPerformAdminActions(): boolean {
-    return this.isEligibleForLogin() && this.isAdmin();
+    return this.isActivated() && this.isAdmin();
   }
 
   /**
@@ -198,8 +223,109 @@ export class User {
       isActive: this.isActive,
       role: this.role,
       isAdmin: this.isAdmin(),
-      canLogin: this.isEligibleForLogin(),
+      canLogin: this.isActivated(),
       permissions: ROLE_PERMISSIONS[this.role] || [],
     };
+  }
+
+  /**
+   * 지갑 주소 추가 (네트워크별로 하나씩만)
+   * @param address 지갑 주소
+   * @param network 블록체인 네트워크
+   */
+  addWalletAddress(address: string, network: string): void {
+    if (!this.wallets) {
+      this.wallets = [];
+    }
+
+    // 이미 해당 네트워크의 지갑이 있는지 확인
+    const existingWalletIndex = this.wallets.findIndex(
+      (wallet) => wallet.network === network,
+    );
+
+    if (existingWalletIndex !== -1) {
+      throw new Error(
+        `${network} 네트워크의 지갑 주소가 이미 등록되어 있습니다`,
+      );
+    }
+
+    const newWallet = new WalletAddress(address, network);
+    this.wallets.push(newWallet);
+  }
+
+  /**
+   * 지갑 주소 수정 (네트워크로 찾아서 주소 변경)
+   * @param network 네트워크명
+   * @param newAddress 새로운 지갑 주소
+   */
+  updateWalletAddress(network: string, newAddress: string): void {
+    if (!this.wallets) {
+      throw new Error('등록된 지갑이 없습니다');
+    }
+
+    const walletIndex = this.wallets.findIndex(
+      (wallet) => wallet.network === network,
+    );
+
+    if (walletIndex === -1) {
+      throw new Error(`${network} 네트워크의 지갑을 찾을 수 없습니다`);
+    }
+
+    // 새 지갑 객체로 교체
+    this.wallets[walletIndex] = new WalletAddress(newAddress, network);
+  }
+
+  /**
+   * 지갑 주소 제거 (네트워크로 찾아서 제거)
+   * @param network 제거할 네트워크
+   * @returns 제거 성공 여부
+   */
+  removeWalletAddress(network: string): boolean {
+    if (!this.wallets || this.wallets.length === 0) {
+      return false;
+    }
+
+    const initialLength = this.wallets.length;
+    this.wallets = this.wallets.filter((wallet) => wallet.network !== network);
+
+    return this.wallets.length < initialLength;
+  }
+
+  /**
+   * 특정 네트워크의 지갑 주소 조회
+   * @param network 네트워크명
+   * @returns 지갑 주소 또는 null
+   */
+  getWalletByNetwork(network: string): WalletAddress | null {
+    if (!this.wallets) return null;
+
+    return this.wallets.find((wallet) => wallet.network === network) || null;
+  }
+
+  /**
+   * 지갑 주소 개수 반환
+   * @returns 등록된 지갑 주소 개수
+   */
+  getWalletAddressCount(): number {
+    return this.wallets ? this.wallets.length : 0;
+  }
+
+  /**
+   * 모든 네트워크 목록 반환
+   * @returns 등록된 네트워크 배열
+   */
+  getRegisteredNetworks(): string[] {
+    if (!this.wallets) return [];
+    return this.wallets.map((wallet) => wallet.network);
+  }
+
+  /**
+   * 특정 네트워크가 등록되어 있는지 확인
+   * @param network 네트워크명
+   * @returns 등록 여부
+   */
+  hasNetworkWallet(network: string): boolean {
+    if (!this.wallets) return false;
+    return this.wallets.some((wallet) => wallet.network === network);
   }
 }

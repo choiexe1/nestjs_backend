@@ -1,11 +1,11 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { RegisterDto } from "./dto/register.dto";
-import { LoginDto } from "./dto/login.dto";
-import { RefreshTokenDto } from "./dto/refresh-token.dto";
-import { User } from "../users/entities/user.entity";
-import { TokenService } from "./services/token.service";
-import { TokenResponse } from "../core/interfaces/token-response.interface";
-import { UsersService } from "../users/users.service";
+import { Injectable, Logger } from '@nestjs/common';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { User } from '../users/entities/user.entity';
+import { TokenService } from './services/token.service';
+import { TokenResponse } from '../core/interfaces/token-response.interface';
+import { UsersService } from '../users/users.service';
 import {
   EmailAlreadyExistsException,
   InvalidCredentialsException,
@@ -13,7 +13,7 @@ import {
   ExpiredTokenException,
   AdminAccessDeniedException,
   UserInactiveException,
-} from "../core/exceptions/custom-exception";
+} from '../core/exceptions/custom-exception';
 
 @Injectable()
 export class AuthService {
@@ -24,7 +24,7 @@ export class AuthService {
     private readonly usersService: UsersService,
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<Omit<User, "password">> {
+  async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
     try {
       const user = await this.usersService.create(registerDto);
       return user.toSafeUser();
@@ -49,7 +49,7 @@ export class AuthService {
       throw new InvalidCredentialsException();
     }
 
-    if (!user.isEligibleForLogin()) {
+    if (!user.isActivated()) {
       this.logger.warn(`비활성 계정 로그인 시도: ${email}`);
       throw new UserInactiveException();
     }
@@ -82,7 +82,7 @@ export class AuthService {
     }
 
     if (!user.canPerformAdminActions()) {
-      if (!user.isEligibleForLogin()) {
+      if (!user.isActivated()) {
         this.logger.warn(`비활성 관리자 계정 로그인 시도: ${email}`);
         throw new UserInactiveException();
       }
@@ -109,7 +109,7 @@ export class AuthService {
   async validateUser(
     email: string,
     password: string,
-  ): Promise<Omit<User, "password"> | null> {
+  ): Promise<Omit<User, 'password'> | null> {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
       return null;
@@ -120,7 +120,7 @@ export class AuthService {
       return null;
     }
 
-    if (!user.isEligibleForLogin()) {
+    if (!user.isActivated()) {
       return null;
     }
 
@@ -140,7 +140,7 @@ export class AuthService {
         throw new InvalidTokenException();
       }
 
-      if (!user.isEligibleForLogin()) {
+      if (!user.isActivated()) {
         this.logger.warn(
           `비활성 계정 토큰 갱신 시도: ${user.email} (ID: ${user.id})`,
         );
@@ -156,7 +156,7 @@ export class AuthService {
         user: user.toSafeUser(),
       };
     } catch (error) {
-      if (error.name === "TokenExpiredError") {
+      if (error.name === 'TokenExpiredError') {
         throw new ExpiredTokenException();
       }
       throw new InvalidTokenException();
